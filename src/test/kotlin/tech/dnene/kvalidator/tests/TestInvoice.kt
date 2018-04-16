@@ -1,9 +1,10 @@
 package tech.dnene.kvalidator.tests
 
-import arrow.data.Invalid
-import arrow.data.NonEmptyList
-import arrow.data.validNel
+import arrow.core.left
+import arrow.core.right
+import arrow.data.*
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Test
 import tech.dnene.kvalidator.DataValidator
 import tech.dnene.kvalidator.IncorrectPattern
@@ -14,12 +15,16 @@ import tech.dnene.kvalidator.types.Invoice
 import tech.dnene.kvalidator.types.InvoiceItem
 import tech.dnene.kvalidator.validators.NonSequentialInvoiceItems
 import java.math.BigDecimal
+import kotlin.coroutines.experimental.EmptyCoroutineContext.fold
 
 class TestInvoice {
+    class WrappedNel(val nel: NonEmptyList<Invalidity>)
+
     @Test
     fun testValidInvoice() {
         val inv = Invoice("123abcXY/-", "counterparty name", listOf(InvoiceItem(1, BigDecimal("123.45"))))
-        assertEquals("Invoice should have been considered valid", inv.validNel<Invalidity,Invoice>(), DataValidator.validate(inv))
+        val expected = Valid(inv)
+        assertEquals("Invoice should have been considered valid", expected, DataValidator.validate(inv))
     }
 
     @Test
@@ -73,5 +78,15 @@ class TestInvoice {
                 NonSequentialInvoiceItems(message="Invoice item numbers are not sequential", min=-1, max=1, count=2))
         val expected = Invalid(NonEmptyList.fromListUnsafe(invalidities))
         assertEquals("multiple invalidities test failed", expected, DataValidator.validate(inv))
+
+        val result = expected.withEither {
+            it.fold(
+                { WrappedNel(it).left() },
+                { it.right() } )
+        }
+
+        result.fold(
+                { assertEquals("wrapping as either failed", invalidities, it.nel.all) },
+                { fail("result should not have been a success") })
     }
 }
