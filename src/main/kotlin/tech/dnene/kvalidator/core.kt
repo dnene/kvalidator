@@ -1,17 +1,16 @@
 package tech.dnene.kvalidator
 
-import arrow.data.ValidatedNel
-import kotlin.reflect.KClass
-
-interface ClassValidator<T> {
-    fun validate(t: T): ValidatedNel<Invalidity, T>
+interface Invalidity {
+  val message: String
 }
+
+val EMPTY_LIST = listOf<Invalidity>()
+
+typealias Validating<T, I> = (T) -> List<I>
 
 interface Validator<C, in T> {
     val defaultMessage: String
-    fun validate(a: T): List<Invalidity>
+    fun validate(t: T): List<Invalidity>
 }
 
-@Target(AnnotationTarget.ANNOTATION_CLASS)
-annotation class Constraint(val validatedBy: KClass<out Validator<*, *>>)
 

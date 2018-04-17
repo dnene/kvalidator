@@ -3,15 +3,22 @@ package tech.dnene.kvalidator.validators
 import tech.dnene.kvalidator.*
 import kotlin.reflect.KProperty1
 
+fun <T> KProperty1<T, Int>.min(min: Int, message: String? = null): Validating<T, Invalidity> =
+        { t: T ->
+            this.get(t)?.let {
+                if (it < min)
+                    listOf(TooSmall(message ?: "${this.name} too small", this,min, it))
+                else
+                    listOf()
+            }
+        }
+
+
 class MinValidator<in T>(val c: Min, val prop: KProperty1<in T, Int>): Validator<Min, T> {
     override fun toString() = "MinValidator(${prop}=>${c})"
     override val defaultMessage = "value-less-than-desired-minimum"
     val message = if (c.message.isBlank()) defaultMessage else c.message
-    override fun validate(a: T): List<Invalidity> =
-            prop.get(a).let { len ->
-                if (len < c.min) listOf(TooSmall(message, prop, c.min, len))
-                else EMPTY_LIST
-            }
+    override fun validate(t: T): List<Invalidity> = prop.min(c.min,message)(t)
 }
 
 @Target(AnnotationTarget.PROPERTY)
